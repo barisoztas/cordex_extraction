@@ -4,6 +4,7 @@ import glob
 from itertools import groupby
 import pandas as pd
 import xarray as xr
+import hvplot.xarray
 
 
 
@@ -15,7 +16,7 @@ class cordex_extraction(object):
         self.lat_lon = None
         self.parameter = None
         self.cordex_data_folder = r"/home/hsaf/Ortak/CORDEX/all/tas/"
-        self.csv_output_folder = r"/home/hsaf/Ortak/CORDEX/all/tas/output"
+        self.csv_output_folder = r"/home/hsaf/Ortak/CORDEX/all/tas/output_debug"
         self.files_names = []
         self.models=[]
 
@@ -58,23 +59,26 @@ class cordex_extraction(object):
 
     def extract_data(self):
         xr.set_options(display_width=70)
-        station = self.lat_lon.values.tolist()
+        stations = self.lat_lon.values.tolist()
         count = 0
         for keys in self.model_dictionary.keys():
             count = count+1
             d ={'time':[],self.parameter:[]}
             model_data = pd.DataFrame(d)
             for i in range(len(self.model_dictionary[keys])):
-                data = xr.open_dataset(self.model_dictionary[keys][i])
-                if (data._coord_names.__contains__('rlat')):
-                    st = data["tas"].sel(rlat=station[0][3],rlon=station[0][4],method='nearest').hvplot().data[['time',self.parameter]]
-                else:
-                    break
-                model_data = model_data.append(st)
-                data.close()
-            model_data.to_csv(os.path.join(self.csv_output_folder,keys+'.csv'),index=False)
-            percent = (count / len(self.model_dictionary(keys)))*100
-            print(f"%{(count / len(self.model_dictionary(keys))) * 100} is done!")
+                station_counter = -1
+                for station in stations:
+                    station_counter = station_counter+1
+                    data = xr.open_dataset(self.model_dictionary[keys][i])
+                    if (data._coord_names.__contains__('rlat')):
+                        st = data["tas"].sel(rlat=station[3],rlon=station[4],method='nearest').hvplot().data[['time',self.parameter]]
+                    else:
+                        break
+                    model_data = model_data.append(st)
+                    data.close()
+                model_data.to_csv(os.path.join(self.csv_output_folder,keys+'_'+station[0]+'.csv'),index=False)
+            percent = (count / len(self.model_dictionary.keys())*len(stations))*100
+            print(f"%{percent:.2f} is done!")
             print(f"{len(self.model_dictionary(keys))-count} left!")
 
 
