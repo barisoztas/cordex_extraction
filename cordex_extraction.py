@@ -4,7 +4,6 @@ import glob
 from itertools import groupby
 import pandas as pd
 import xarray as xr
-import hvplot.xarray
 from functools import reduce
 
 
@@ -16,12 +15,13 @@ class cordex_extraction(object):
         self.lat_lon_csv = r"/home/hsaf/Ortak/CORDEX/all/tas/lat_lon.csv"
         self.lat_lon = None
         self.parameter = None
-        self.cordex_data_folder = r"/home/hsaf/Ortak/CORDEX/all/tas/"
-        self.csv_output_folder = r"/home/hsaf/Ortak/CORDEX/all/tas/output"
+        self.cordex_data_folder = r"/home/hsaf/Ortak/CORDEX/all/pr/"
+        self.csv_output_folder = r"/home/hsaf/Ortak/CORDEX/all/pr" \
+                                 r"/output"
         self.files_names = []
         self.models=[]
         self.csv_file_names = None
-        self.parameter ="tas"
+        self.parameter ="pr"
         self.grouped_data = []
         self.merged_df_list = []
         self.model_names_scenario_list = []
@@ -72,19 +72,20 @@ class cordex_extraction(object):
                 for i in range(len(self.model_dictionary[keys])):
                     data = xr.open_dataset(self.model_dictionary[keys][i])
                     if (data._coord_names.__contains__('rlat')):
-                        st = data["tas"].sel(rlat=station[3],rlon=station[4],method='nearest').hvplot().data[['time',self.parameter]]
+                        st = data[self.parameter].sel(rlat=station[3],rlon=station[4],method='nearest').hvplot().data[['time',self.parameter]]
                         model_data = model_data.append(st)
                     else:
                         data.close()
                         break
                 path_name = os.path.join(self.csv_output_folder,(keys+'_'+station[0]+'.csv'))
                 model_data.to_csv(path_name,index=False)
-                percent = (count / len(self.model_dictionary.keys())*len(stations))*100
+                percent = (count / (len(self.model_dictionary.keys())*len(stations)))*100
                 print(f"%{percent:.2f} is done!")
                 print(f"{len(self.model_dictionary.keys())*len(stations)-count} left!")
 
     def traverse_csv(self):
-        self.csv_file_names = sorted(list(glob.iglob(os.path.join(self.csv_output_folder,'**',(self.parameter+'*.csv')),recursive=True)))
+
+        self.csv_file_names = sorted(list(glob.iglob(os.path.join(self.csv_output_folder,'**',('*'+self.station_name+'*.csv')),recursive=True)))
         #for i in range(len(self.csv_file_names)):
         #    self.csv_file_names[i] = self.csv_file_names[i].split(sep='/')[-1]
         historical_list = [k for k in self.csv_file_names if 'historical' in k]
@@ -100,7 +101,6 @@ class cordex_extraction(object):
             model_names = []
             for i in range(len(scenario)):
                 model_names.append(scenario[i].split(sep='/')[-1])
-            for i in range(len(scenario)):
                 scenario_list_data.append(pd.read_csv(scenario[i]))
             self.merged_df = reduce(lambda left, right: pd.merge(left, right, on=['time'],
                                                                  how='left'), scenario_list_data)
@@ -108,7 +108,7 @@ class cordex_extraction(object):
             new_column_names.extend(model_names)
             self.model_names_scenario_list.append(model_names)
             self.merged_df.columns = new_column_names
-            self.merged_df.to_csv(os.path.join(self.csv_output_folder,(model_names[0].split('_')[3]+'_daily'+'.csv')))
+            self.merged_df.to_csv(os.path.join(self.csv_output_folder,(model_names[0].split('_')[3]+'_daily_'+self.station_name+'.csv')))
             self.merged_df_list.append(self.merged_df)
             del self.merged_df
 
@@ -122,13 +122,13 @@ class cordex_extraction(object):
                 ##Yearly Part
                 scenario_yearly = self.merged_df_list[i].groupby("Year")[self.model_names_scenario_list[i]].mean()
                 path_name = os.path.join(self.csv_output_folder,
-                                         (self.model_names_scenario_list[i][0].split('_')[3]+'_yearly'+'.csv'))
+                                         (self.model_names_scenario_list[i][0].split('_')[3]+'_yearly_'+self.station_name+'.csv'))
                 scenario_yearly.to_csv(path_name)
                 ##Monthly Part
                 scenario_monthly = self.merged_df_list[i].groupby(["Year",'Month'])[self.model_names_scenario_list[i]].mean()
                 path_name = os.path.join(self.csv_output_folder,
-                                         (self.model_names_scenario_list[i][0].split('_')[3]+'_monthly'+'.csv'))
-                scenario_monthly.to_csv(path_name)
+                                         (self.model_names_scenario_list[i][0].split('_')[3]+'_monthly_'+self.station_name+'.csv'))
+                scenario_monthly.to_csv(path_name,)
         elif (self.parameter=='pr' or self.parameter=='prAdjusted'):
             for i in range(len(self.merged_df_list)):
                 self.merged_df_list[i]['time'] = pd.to_datetime(self.merged_df_list[i]['time'].astype(str),
@@ -138,13 +138,13 @@ class cordex_extraction(object):
                 ##Yearly Part
                 scenario_yearly = self.merged_df_list[i].groupby("Year")[self.model_names_scenario_list[i]].sum()
                 path_name = os.path.join(self.csv_output_folder,
-                                         (self.model_names_scenario_list[i][0].split('_')[3] + '_yearly' + '.csv'))
+                                         (self.model_names_scenario_list[i][0].split('_')[3] + '_yearly_'+self.station_name + '.csv'))
                 scenario_yearly.to_csv(path_name)
                 ##Monthly Part
                 scenario_monthly = self.merged_df_list[i].groupby(["Year", 'Month'])[
                     self.model_names_scenario_list[i]].sum()
                 path_name = os.path.join(self.csv_output_folder,
-                                         (self.model_names_scenario_list[i][0].split('_')[3] + '_monthly' + '.csv'))
+                                         (self.model_names_scenario_list[i][0].split('_')[3] + '_monthly_'+self.station_name + '.csv'))
                 scenario_monthly.to_csv(path_name)
 
     def extract(self):
@@ -160,11 +160,15 @@ class cordex_extraction(object):
         print(f"Conservation from daily data to monthly data is beginning at {datetime.datetime.now()}. \n"
               f"All the historical, rcp45, rcp85 data will be merged and exported to Excel file!")
         self.start_time = datetime.datetime.now()
-        self.traverse_csv()
-        self.merge_csv()
-        self.monthly_yearly_conversion()
-        self.end_time = datetime.datetime.now()
-        self.print_duration()
+        self.read_lat_lon_info()
+        for station in self.lat_lon.values.tolist():
+            self.station_name=station[0]
+            self.traverse_csv()
+            self.merge_csv()
+            self.monthly_yearly_conversion()
+            self.end_time = datetime.datetime.now()
+            print(f"For {station[0]} Station:")
+            self.print_duration()
 
 
 
