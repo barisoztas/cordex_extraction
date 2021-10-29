@@ -26,6 +26,7 @@ class cordex_extraction(object):
         self.merged_df_list = []
         self.model_names_scenario_list = []
     def print_duration(self):
+        self.end_time = datetime.datetime.now()
         return print("Total Process time:  {}".format(str(self.end_time - self.start_time)))
 
     def read_lat_lon_info(self):
@@ -153,7 +154,6 @@ class cordex_extraction(object):
         self.traverse_rcm()
         self.grouping()
         self.extract_data()
-        self.end_time = datetime.datetime.now()
         self.print_duration()
 
     def monthly_conversion(self):
@@ -166,7 +166,6 @@ class cordex_extraction(object):
             self.traverse_csv()
             self.merge_csv()
             self.monthly_yearly_conversion()
-            self.end_time = datetime.datetime.now()
             print(f"For {station[0]} Station:")
             self.print_duration()
 
