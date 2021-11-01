@@ -9,32 +9,31 @@ import hvplot.xarray
 
 
 
-class cordex_extraction(object):
+class gcm_extraction(object):
     def __init__(self):
         self.start_time = datetime.datetime.now()
         self.end_time = None
         self.lat_lon_csv = r"/home/hsaf/Ortak/CORDEX/all/tas/lat_lon.csv"
         self.lat_lon = None
         self.parameter = None
-        self.cordex_data_folder = r"/home/hsaf/Ortak/CORDEX/all/pr/"
-        self.csv_output_folder = r"/home/hsaf/Ortak/CORDEX/all/pr" \
+        self.cordex_data_folder = r"/home/hsaf/Ortak/GCM/tas/"
+        self.csv_output_folder = r"/home/hsaf/Ortak/GCM/tas" \
                                  r"/output"
         self.files_names = []
         self.models=[]
         self.csv_file_names = None
-        self.parameter ="pr"
+        self.parameter ="tas"
         self.grouped_data = []
         self.merged_df_list = []
         self.model_names_scenario_list = []
     def print_duration(self):
-        self.end_time = datetime.datetime.now()
         return print("Total Process time:  {}".format(str(self.end_time - self.start_time)))
 
     def read_lat_lon_info(self):
         self.lat_lon = pd.read_csv(self.lat_lon_csv)
         return self.lat_lon
 
-    def traverse_rcm(self):
+    def traverse_gcm(self):
         self.files_names = sorted(list(glob.iglob(os.path.join(self.cordex_data_folder,'**',self.parameter+'*.nc'),recursive=True)))
         return self.files_names
 
@@ -51,7 +50,7 @@ class cordex_extraction(object):
         del key, group
         model_names = []
         for model in self.models:
-            model_names.append('_'.join(model[0].split('_')[0:8]))
+            model_names.append('_'.join(model[0].split('_')[0:6]))
 
         self.model_dictionary = {}
         for i in range(len(self.models)):
@@ -61,6 +60,7 @@ class cordex_extraction(object):
             for i in range(len(self.model_dictionary[keys])):
                 path = os.path.join(self.cordex_data_folder,keys,self.model_dictionary[keys][i])
                 self.model_dictionary[keys][i] = path
+        a = 1
 
     def extract_data(self):
         xr.set_options(display_width=70)
@@ -73,12 +73,10 @@ class cordex_extraction(object):
                 count = count + 1
                 for i in range(len(self.model_dictionary[keys])):
                     data = xr.open_dataset(self.model_dictionary[keys][i])
-                    if (data._coord_names.__contains__('rlat')):
-                        st = data[self.parameter].sel(rlat=station[3],rlon=station[4],method='nearest').hvplot().data[['time',self.parameter]]
-                        model_data = model_data.append(st)
-                    else:
-                        data.close()
-                        break
+
+                    st = data[self.parameter].sel(lat=station[1],lon=station[2],method='nearest').hvplot().data[['time',self.parameter]]
+                    model_data = model_data.append(st)
+
                 path_name = os.path.join(self.csv_output_folder,(keys+'_'+station[0]+'.csv'))
                 model_data.to_csv(path_name,index=False)
                 percent = (count / (len(self.model_dictionary.keys())*len(stations)))*100
@@ -90,11 +88,11 @@ class cordex_extraction(object):
         self.csv_file_names = sorted(list(glob.iglob(os.path.join(self.csv_output_folder,'**',('*'+self.station_name+'*.csv')),recursive=True)))
         #for i in range(len(self.csv_file_names)):
         #    self.csv_file_names[i] = self.csv_file_names[i].split(sep='/')[-1]
-        historical_list = [k for k in self.csv_file_names if 'historical' in k]
-        rcp45 = [k for k in self.csv_file_names if 'rcp45' in k]
-        rcp85 = [k for k in self.csv_file_names if 'rcp85' in k]
-        self.grouped_data = [historical_list, rcp45, rcp85]
-        del historical_list, rcp45, rcp85
+        historical_list = [k for k in self.csv_file_names if 'amip' in k]
+        ssp245 = [k for k in self.csv_file_names if 'ssp245' in k]
+        ssp370 = [k for k in self.csv_file_names if 'ssp370' in k]
+        self.grouped_data = [historical_list, ssp245, ssp370]
+        del historical_list, ssp245, ssp370
         return self.grouped_data,self.csv_file_names
 
     def merge_csv(self):
@@ -152,14 +150,15 @@ class cordex_extraction(object):
     def extract(self):
         print(f"Process has been started at {self.start_time}")
         self.read_lat_lon_info()
-        self.traverse_rcm()
+        self.traverse_gcm()
         self.grouping()
         self.extract_data()
+        self.end_time = datetime.datetime.now()
         self.print_duration()
 
     def monthly_conversion(self):
         print(f"Conservation from daily data to monthly data is beginning at {datetime.datetime.now()}. \n"
-              f"All the historical, rcp45, rcp85 data will be merged and exported to Excel file!")
+              f"All the historical, ssp245, ssp370 data will be merged and exported to Excel file!")
         self.start_time = datetime.datetime.now()
         self.read_lat_lon_info()
         for station in self.lat_lon.values.tolist():
@@ -167,6 +166,7 @@ class cordex_extraction(object):
             self.traverse_csv()
             self.merge_csv()
             self.monthly_yearly_conversion()
+            self.end_time = datetime.datetime.now()
             print(f"For {station[0]} Station:")
             self.print_duration()
 
@@ -174,7 +174,6 @@ class cordex_extraction(object):
 
 
 if __name__ =='__main__':
-    cordex_extraction_object = cordex_extraction()
-    cordex_extraction_object.extract()
-    cordex_extraction_object.monthly_conversion()
-
+    gcm_extraction_object = gcm_extraction()
+    gcm_extraction_object.extract()
+    gcm_extraction_object.monthly_conversion()
