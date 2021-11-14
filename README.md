@@ -8,3 +8,15 @@ Climate Model folders should be in the same directory.
 Output folder for resultant csv should be edited in the script.  
 Output folder should be empty at the beginning'  
 Parameter variable should be changed.
+
+
+Required Python libraries:  
+os  
+datetime  
+glob  
+pandas  
+xarray  
+functools  
+hvplot.xarray  
+
+Contact info: baris.oztas@metu.edu.tr  
