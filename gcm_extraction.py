@@ -13,16 +13,16 @@ class gcm_extraction(object):
     def __init__(self):
         self.start_time = datetime.datetime.now()
         self.end_time = None
-        self.lat_lon_csv = r"/home/hsaf/Ortak/CORDEX/all/tas/lat_lon.csv"
+        self.lat_lon_csv = r"/home/hsaf/Ortak/GCM/pr/lat_lon.csv"
         self.lat_lon = None
         self.parameter = None
-        self.cordex_data_folder = r"/home/hsaf/Ortak/GCM/tas/"
-        self.csv_output_folder = r"/home/hsaf/Ortak/GCM/tas" \
+        self.cordex_data_folder = r"/home/hsaf/Ortak/GCM/pr/"
+        self.csv_output_folder = r"/home/hsaf/Ortak/GCM/pr" \
                                  r"/output"
         self.files_names = []
         self.models=[]
         self.csv_file_names = None
-        self.parameter ="tas"
+        self.parameter ="pr"
         self.grouped_data = []
         self.merged_df_list = []
         self.model_names_scenario_list = []
@@ -75,6 +75,10 @@ class gcm_extraction(object):
                     data = xr.open_dataset(self.model_dictionary[keys][i])
 
                     st = data[self.parameter].sel(lat=station[1],lon=station[2],method='nearest').hvplot().data[['time',self.parameter]]
+                    if (self.parameter=='pr' or self.parameter=='prAdjusted'):
+                        st[self.parameter]= st[self.parameter]*86400
+                    elif (self.parameter=='tas' or self.parameter=='tmin' or self.parameter=='tmax'):
+                        st[self.parameter]= st[self.parameter]-273
                     model_data = model_data.append(st)
 
                 path_name = os.path.join(self.csv_output_folder,(keys+'_'+station[0]+'.csv'))
@@ -88,11 +92,11 @@ class gcm_extraction(object):
         self.csv_file_names = sorted(list(glob.iglob(os.path.join(self.csv_output_folder,'**',('*'+self.station_name+'*.csv')),recursive=True)))
         #for i in range(len(self.csv_file_names)):
         #    self.csv_file_names[i] = self.csv_file_names[i].split(sep='/')[-1]
-        historical_list = [k for k in self.csv_file_names if 'amip' in k]
+        historical_list = [k for k in self.csv_file_names if 'historical' in k]
         ssp245 = [k for k in self.csv_file_names if 'ssp245' in k]
-        ssp370 = [k for k in self.csv_file_names if 'ssp370' in k]
-        self.grouped_data = [historical_list, ssp245, ssp370]
-        del historical_list, ssp245, ssp370
+        ssp585 = [k for k in self.csv_file_names if 'ssp585' in k]
+        self.grouped_data = [historical_list, ssp245, ssp585]
+        del historical_list, ssp245, ssp585
         return self.grouped_data,self.csv_file_names
 
     def merge_csv(self):
@@ -158,7 +162,7 @@ class gcm_extraction(object):
 
     def monthly_conversion(self):
         print(f"Conservation from daily data to monthly data is beginning at {datetime.datetime.now()}. \n"
-              f"All the historical, ssp245, ssp370 data will be merged and exported to Excel file!")
+              f"All the historical, ssp245, ssp585 data will be merged and exported to Excel file!")
         self.start_time = datetime.datetime.now()
         self.read_lat_lon_info()
         for station in self.lat_lon.values.tolist():
@@ -175,5 +179,5 @@ class gcm_extraction(object):
 
 if __name__ =='__main__':
     gcm_extraction_object = gcm_extraction()
-    gcm_extraction_object.extract()
+    #gcm_extraction_object.extract()
     gcm_extraction_object.monthly_conversion()
