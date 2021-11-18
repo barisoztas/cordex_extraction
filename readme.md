@@ -3,14 +3,14 @@ Prepared by Baris Oztas for TUBİTAK 2232 Project called "Climate change effects
 A simple and fast way for extraction cordex data just using rlat and rlon info of desired location.  
 A simple and fast way for extraction global circulation model (CMIP5 & CMIP6) data just using lat and lon info of desired location.  
 
-How to use: 
+### How to use  
 Climate Model folders should be in the same directory.  
 Output folder for resultant csv should be edited in the script.  
 Output folder should be empty at the beginning'  
 Parameter variable should be changed.
 
 
-Required Python libraries:  
+### Required Python libraries    
 os  
 datetime  
 glob  
@@ -19,4 +19,5 @@ xarray
 functools  
 hvplot.xarray  
 
-Contact info: baris.oztas@metu.edu.tr  
+#### Contact info    
+baris.oztas@metu.edu.tr  
